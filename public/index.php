@@ -9,7 +9,10 @@ if (PHP_SAPI == 'cli-server') {
     }
 }
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// setup Propel
+require_once __DIR__ . '/../storage-api/generated-conf/config.php';
 
 session_start();
 

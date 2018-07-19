@@ -1,0 +1,10 @@
+propel:
+    database:
+        connections:
+            storage_api:
+                adapter: mysql
+                dsn: mysql:host=localhost;port=3306;dbname=storage_api
+                user: storage_api
+                password: z981yJuKpTQ4yAeT
+                settings:
+                    charset: utf8

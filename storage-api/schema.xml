@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database name="storage_api" defaultIdMethod="native">
+    <!-- table definitions go here -->
+
+    <table name="folder" phpName="Folder">
+        <!-- column and foreign key definitions go here -->
+        <column name="id" type="integer" required="true" primaryKey="true" autoIncrement="true"/>
+        <column name="parent_id" type="integer" required="true" />
+        <column name="name" type="varchar" size="255" required="true" />
+    </table>
+
+    <table name="file" phpName="File">
+        <!-- column and foreign key definitions go here -->
+        <column name="id" type="integer" required="true" primaryKey="true" autoIncrement="true"/>
+        <column name="folder_id" type="integer" required="true" />
+        <column name="name" type="varchar" size="255" required="true" />
+
+        <foreign-key foreignTable="folder" phpName="Folder" refPhpName="File" onDelete="cascade">
+            <reference local="folder_id" foreign="id"/>
+        </foreign-key>
+    </table>
+</database>
