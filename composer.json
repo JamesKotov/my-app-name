@@ -22,7 +22,7 @@
         "phpunit/phpunit": ">=4.8 < 6.0"
     },
     "autoload": {
-        "classmap": ["storage-api/generated-classes/"]
+        "classmap": ["storage-api/generated-classes/", "storage-api/actions"]
     },
     "autoload-dev": {
         "psr-4": {
