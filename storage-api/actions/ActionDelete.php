@@ -16,12 +16,15 @@ class ActionDelete extends StorageApi
 		if (!is_null($this->oFile))
 		{
 			$this->deleteFile($this->oFile);
+			$data = $this->getFolderContent($this->oFolder);
 		} else
 		{
+			$oParentFolder = $this->getParentFolder($this->oFolder);
 			$this->deleteFolder($this->oFolder);
+			$data = $this->getFolderContent($oParentFolder);
 		}
 
-		$data = $this->getFolderContent($this->oFolder);
+
 		return $response->withJson($data);
 	}
 }

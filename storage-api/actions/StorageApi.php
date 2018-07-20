@@ -190,6 +190,19 @@ class StorageApi
 		}
 	}
 
+	public function getParentFolder($oFolder)
+	{
+		if ($oFolder->getParentId() >= 0)
+		{
+			$oParentFolder = FolderQuery::create()->findPK($oFolder->getParentId());
+			if (!is_null($oParentFolder))
+			{
+				return $oParentFolder;
+			}
+		}
+		return $oFolder;
+	}
+
 	public function __invoke($request, $response, $args)
 	{
 		$this->parseUrl(isset($args['path']) ? $args['path'] : '');
