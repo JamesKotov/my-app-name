@@ -9,7 +9,7 @@ abstract class StorageApi {
 
 	public function __construct($container) {
 		$this->container = $container;
-		$this->oFolder = FolderQuery::create()->findPK(0);
+		$this->oFolder = FolderQuery::create()->findOneByParentId(-1);
 		$this->oFile = null;
 		$this->isError = false;
 	}
@@ -19,7 +19,7 @@ abstract class StorageApi {
 
 		$oFile = null;
 
-		$iParentId = 0;
+		$iParentId = $this->oFolder->getId();
 
 		if (sizeof($aPath))
 		{
@@ -53,7 +53,7 @@ abstract class StorageApi {
 			{
 				// try to find a file
 				$this->oFile = FileQuery::create()
-					->filterByFolderId($this->oFolder->getId())
+					->filterByFolderId($iParentId)
 					->filterByName($aPath[0])
 					->findOne();
 
@@ -62,9 +62,6 @@ abstract class StorageApi {
 					$this->isError = true;
 				}
 			}
-		} else
-		{
-			$this->oFolder = FolderQuery::create()->findPK($iParentId);
 		}
 	}
 
