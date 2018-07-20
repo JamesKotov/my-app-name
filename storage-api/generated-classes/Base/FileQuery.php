@@ -10,7 +10,6 @@ use Map\FileTableMap;
 use Propel\Runtime\Propel;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\ModelCriteria;
-use Propel\Runtime\ActiveQuery\ModelJoin;
 use Propel\Runtime\Collection\ObjectCollection;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Exception\PropelException;
@@ -35,18 +34,6 @@ use Propel\Runtime\Exception\PropelException;
  * @method     ChildFileQuery leftJoinWith($relation) Adds a LEFT JOIN clause and with to the query
  * @method     ChildFileQuery rightJoinWith($relation) Adds a RIGHT JOIN clause and with to the query
  * @method     ChildFileQuery innerJoinWith($relation) Adds a INNER JOIN clause and with to the query
- *
- * @method     ChildFileQuery leftJoinFolder($relationAlias = null) Adds a LEFT JOIN clause to the query using the Folder relation
- * @method     ChildFileQuery rightJoinFolder($relationAlias = null) Adds a RIGHT JOIN clause to the query using the Folder relation
- * @method     ChildFileQuery innerJoinFolder($relationAlias = null) Adds a INNER JOIN clause to the query using the Folder relation
- *
- * @method     ChildFileQuery joinWithFolder($joinType = Criteria::INNER_JOIN) Adds a join clause and with to the query using the Folder relation
- *
- * @method     ChildFileQuery leftJoinWithFolder() Adds a LEFT JOIN clause and with to the query using the Folder relation
- * @method     ChildFileQuery rightJoinWithFolder() Adds a RIGHT JOIN clause and with to the query using the Folder relation
- * @method     ChildFileQuery innerJoinWithFolder() Adds a INNER JOIN clause and with to the query using the Folder relation
- *
- * @method     \FolderQuery endUse() Finalizes a secondary criteria and merges it with its primary Criteria
  *
  * @method     ChildFile findOne(ConnectionInterface $con = null) Return the first ChildFile matching the query
  * @method     ChildFile findOneOrCreate(ConnectionInterface $con = null) Return the first ChildFile matching the query, or a new ChildFile object populated from the query conditions when no match is found
@@ -305,8 +292,6 @@ abstract class FileQuery extends ModelCriteria
      * $query->filterByFolderId(array('min' => 12)); // WHERE folder_id > 12
      * </code>
      *
-     * @see       filterByFolder()
-     *
      * @param     mixed $folderId The value to use as filter.
      *              Use scalar values for equality.
      *              Use array values for in_array() equivalent.
@@ -361,83 +346,6 @@ abstract class FileQuery extends ModelCriteria
         }
 
         return $this->addUsingAlias(FileTableMap::COL_NAME, $name, $comparison);
-    }
-
-    /**
-     * Filter the query by a related \Folder object
-     *
-     * @param \Folder|ObjectCollection $folder The related object(s) to use as filter
-     * @param string $comparison Operator to use for the column comparison, defaults to Criteria::EQUAL
-     *
-     * @throws \Propel\Runtime\Exception\PropelException
-     *
-     * @return ChildFileQuery The current query, for fluid interface
-     */
-    public function filterByFolder($folder, $comparison = null)
-    {
-        if ($folder instanceof \Folder) {
-            return $this
-                ->addUsingAlias(FileTableMap::COL_FOLDER_ID, $folder->getId(), $comparison);
-        } elseif ($folder instanceof ObjectCollection) {
-            if (null === $comparison) {
-                $comparison = Criteria::IN;
-            }
-
-            return $this
-                ->addUsingAlias(FileTableMap::COL_FOLDER_ID, $folder->toKeyValue('PrimaryKey', 'Id'), $comparison);
-        } else {
-            throw new PropelException('filterByFolder() only accepts arguments of type \Folder or Collection');
-        }
-    }
-
-    /**
-     * Adds a JOIN clause to the query using the Folder relation
-     *
-     * @param     string $relationAlias optional alias for the relation
-     * @param     string $joinType Accepted values are null, 'left join', 'right join', 'inner join'
-     *
-     * @return $this|ChildFileQuery The current query, for fluid interface
-     */
-    public function joinFolder($relationAlias = null, $joinType = Criteria::INNER_JOIN)
-    {
-        $tableMap = $this->getTableMap();
-        $relationMap = $tableMap->getRelation('Folder');
-
-        // create a ModelJoin object for this join
-        $join = new ModelJoin();
-        $join->setJoinType($joinType);
-        $join->setRelationMap($relationMap, $this->useAliasInSQL ? $this->getModelAlias() : null, $relationAlias);
-        if ($previousJoin = $this->getPreviousJoin()) {
-            $join->setPreviousJoin($previousJoin);
-        }
-
-        // add the ModelJoin to the current object
-        if ($relationAlias) {
-            $this->addAlias($relationAlias, $relationMap->getRightTable()->getName());
-            $this->addJoinObject($join, $relationAlias);
-        } else {
-            $this->addJoinObject($join, 'Folder');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Use the Folder relation Folder object
-     *
-     * @see useQuery()
-     *
-     * @param     string $relationAlias optional alias for the relation,
-     *                                   to be used as main alias in the secondary query
-     * @param     string $joinType Accepted values are null, 'left join', 'right join', 'inner join'
-     *
-     * @return \FolderQuery A secondary query class using the current class as primary query
-     */
-    public function useFolderQuery($relationAlias = null, $joinType = Criteria::INNER_JOIN)
-    {
-        return $this
-            ->joinFolder($relationAlias, $joinType)
-            ->useQuery($relationAlias ? $relationAlias : 'Folder', '\FolderQuery');
     }
 
     /**

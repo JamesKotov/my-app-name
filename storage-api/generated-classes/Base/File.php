@@ -3,8 +3,6 @@
 namespace Base;
 
 use \FileQuery as ChildFileQuery;
-use \Folder as ChildFolder;
-use \FolderQuery as ChildFolderQuery;
 use \Exception;
 use \PDO;
 use Map\FileTableMap;
@@ -81,11 +79,6 @@ abstract class File implements ActiveRecordInterface
      * @var        string
      */
     protected $name;
-
-    /**
-     * @var        ChildFolder
-     */
-    protected $aFolder;
 
     /**
      * Flag to prevent endless save loop, if this object is referenced
@@ -387,10 +380,6 @@ abstract class File implements ActiveRecordInterface
             $this->modifiedColumns[FileTableMap::COL_FOLDER_ID] = true;
         }
 
-        if ($this->aFolder !== null && $this->aFolder->getId() !== $v) {
-            $this->aFolder = null;
-        }
-
         return $this;
     } // setFolderId()
 
@@ -488,9 +477,6 @@ abstract class File implements ActiveRecordInterface
      */
     public function ensureConsistency()
     {
-        if ($this->aFolder !== null && $this->folder_id !== $this->aFolder->getId()) {
-            $this->aFolder = null;
-        }
     } // ensureConsistency
 
     /**
@@ -530,7 +516,6 @@ abstract class File implements ActiveRecordInterface
 
         if ($deep) {  // also de-associate any related objects?
 
-            $this->aFolder = null;
         } // if (deep)
     }
 
@@ -633,18 +618,6 @@ abstract class File implements ActiveRecordInterface
         $affectedRows = 0; // initialize var to track total num of affected rows
         if (!$this->alreadyInSave) {
             $this->alreadyInSave = true;
-
-            // We call the save method on the following object(s) if they
-            // were passed to this object by their corresponding set
-            // method.  This object relates to these object(s) by a
-            // foreign key reference.
-
-            if ($this->aFolder !== null) {
-                if ($this->aFolder->isModified() || $this->aFolder->isNew()) {
-                    $affectedRows += $this->aFolder->save($con);
-                }
-                $this->setFolder($this->aFolder);
-            }
 
             if ($this->isNew() || $this->isModified()) {
                 // persist changes
@@ -800,11 +773,10 @@ abstract class File implements ActiveRecordInterface
      *                    Defaults to TableMap::TYPE_PHPNAME.
      * @param     boolean $includeLazyLoadColumns (optional) Whether to include lazy loaded columns. Defaults to TRUE.
      * @param     array $alreadyDumpedObjects List of objects to skip to avoid recursion
-     * @param     boolean $includeForeignObjects (optional) Whether to include hydrated related objects. Default to FALSE.
      *
      * @return array an associative array containing the field names (as keys) and field values
      */
-    public function toArray($keyType = TableMap::TYPE_PHPNAME, $includeLazyLoadColumns = true, $alreadyDumpedObjects = array(), $includeForeignObjects = false)
+    public function toArray($keyType = TableMap::TYPE_PHPNAME, $includeLazyLoadColumns = true, $alreadyDumpedObjects = array())
     {
 
         if (isset($alreadyDumpedObjects['File'][$this->hashCode()])) {
@@ -822,23 +794,6 @@ abstract class File implements ActiveRecordInterface
             $result[$key] = $virtualColumn;
         }
 
-        if ($includeForeignObjects) {
-            if (null !== $this->aFolder) {
-
-                switch ($keyType) {
-                    case TableMap::TYPE_CAMELNAME:
-                        $key = 'folder';
-                        break;
-                    case TableMap::TYPE_FIELDNAME:
-                        $key = 'folder';
-                        break;
-                    default:
-                        $key = 'Folder';
-                }
-
-                $result[$key] = $this->aFolder->toArray($keyType, $includeLazyLoadColumns,  $alreadyDumpedObjects, true);
-            }
-        }
 
         return $result;
     }
@@ -1083,66 +1038,12 @@ abstract class File implements ActiveRecordInterface
     }
 
     /**
-     * Declares an association between this object and a ChildFolder object.
-     *
-     * @param  ChildFolder $v
-     * @return $this|\File The current object (for fluent API support)
-     * @throws PropelException
-     */
-    public function setFolder(ChildFolder $v = null)
-    {
-        if ($v === null) {
-            $this->setFolderId(NULL);
-        } else {
-            $this->setFolderId($v->getId());
-        }
-
-        $this->aFolder = $v;
-
-        // Add binding for other direction of this n:n relationship.
-        // If this object has already been added to the ChildFolder object, it will not be re-added.
-        if ($v !== null) {
-            $v->addFile($this);
-        }
-
-
-        return $this;
-    }
-
-
-    /**
-     * Get the associated ChildFolder object
-     *
-     * @param  ConnectionInterface $con Optional Connection object.
-     * @return ChildFolder The associated ChildFolder object.
-     * @throws PropelException
-     */
-    public function getFolder(ConnectionInterface $con = null)
-    {
-        if ($this->aFolder === null && ($this->folder_id != 0)) {
-            $this->aFolder = ChildFolderQuery::create()->findPk($this->folder_id, $con);
-            /* The following can be used additionally to
-                guarantee the related object contains a reference
-                to this object.  This level of coupling may, however, be
-                undesirable since it could result in an only partially populated collection
-                in the referenced object.
-                $this->aFolder->addFiles($this);
-             */
-        }
-
-        return $this->aFolder;
-    }
-
-    /**
      * Clears the current object, sets all attributes to their default values and removes
      * outgoing references as well as back-references (from other objects to this one. Results probably in a database
      * change of those foreign objects when you call `save` there).
      */
     public function clear()
     {
-        if (null !== $this->aFolder) {
-            $this->aFolder->removeFile($this);
-        }
         $this->id = null;
         $this->folder_id = null;
         $this->name = null;
@@ -1166,7 +1067,6 @@ abstract class File implements ActiveRecordInterface
         if ($deep) {
         } // if ($deep)
 
-        $this->aFolder = null;
     }
 
     /**

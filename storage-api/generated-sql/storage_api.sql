@@ -28,12 +28,7 @@ CREATE TABLE `file`
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `folder_id` INTEGER NOT NULL,
     `name` VARCHAR(255) NOT NULL,
-    PRIMARY KEY (`id`),
-    INDEX `file_fi_db0f19` (`folder_id`),
-    CONSTRAINT `file_fk_db0f19`
-        FOREIGN KEY (`folder_id`)
-        REFERENCES `folder` (`id`)
-        ON DELETE CASCADE
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB CHARACTER SET='utf8';
 
 # This restores the fkey checks, after having unset them earlier

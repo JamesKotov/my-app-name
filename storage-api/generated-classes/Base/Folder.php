@@ -2,20 +2,15 @@
 
 namespace Base;
 
-use \File as ChildFile;
-use \FileQuery as ChildFileQuery;
-use \Folder as ChildFolder;
 use \FolderQuery as ChildFolderQuery;
 use \Exception;
 use \PDO;
-use Map\FileTableMap;
 use Map\FolderTableMap;
 use Propel\Runtime\Propel;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\ModelCriteria;
 use Propel\Runtime\ActiveRecord\ActiveRecordInterface;
 use Propel\Runtime\Collection\Collection;
-use Propel\Runtime\Collection\ObjectCollection;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Exception\BadMethodCallException;
 use Propel\Runtime\Exception\LogicException;
@@ -86,24 +81,12 @@ abstract class Folder implements ActiveRecordInterface
     protected $name;
 
     /**
-     * @var        ObjectCollection|ChildFile[] Collection to store aggregation of ChildFile objects.
-     */
-    protected $collFiles;
-    protected $collFilesPartial;
-
-    /**
      * Flag to prevent endless save loop, if this object is referenced
      * by another object which falls in this transaction.
      *
      * @var boolean
      */
     protected $alreadyInSave = false;
-
-    /**
-     * An array of objects scheduled for deletion.
-     * @var ObjectCollection|ChildFile[]
-     */
-    protected $filesScheduledForDeletion = null;
 
     /**
      * Initializes internal state of Base\Folder object.
@@ -533,8 +516,6 @@ abstract class Folder implements ActiveRecordInterface
 
         if ($deep) {  // also de-associate any related objects?
 
-            $this->collFiles = null;
-
         } // if (deep)
     }
 
@@ -647,23 +628,6 @@ abstract class Folder implements ActiveRecordInterface
                     $affectedRows += $this->doUpdate($con);
                 }
                 $this->resetModified();
-            }
-
-            if ($this->filesScheduledForDeletion !== null) {
-                if (!$this->filesScheduledForDeletion->isEmpty()) {
-                    \FileQuery::create()
-                        ->filterByPrimaryKeys($this->filesScheduledForDeletion->getPrimaryKeys(false))
-                        ->delete($con);
-                    $this->filesScheduledForDeletion = null;
-                }
-            }
-
-            if ($this->collFiles !== null) {
-                foreach ($this->collFiles as $referrerFK) {
-                    if (!$referrerFK->isDeleted() && ($referrerFK->isNew() || $referrerFK->isModified())) {
-                        $affectedRows += $referrerFK->save($con);
-                    }
-                }
             }
 
             $this->alreadyInSave = false;
@@ -809,11 +773,10 @@ abstract class Folder implements ActiveRecordInterface
      *                    Defaults to TableMap::TYPE_PHPNAME.
      * @param     boolean $includeLazyLoadColumns (optional) Whether to include lazy loaded columns. Defaults to TRUE.
      * @param     array $alreadyDumpedObjects List of objects to skip to avoid recursion
-     * @param     boolean $includeForeignObjects (optional) Whether to include hydrated related objects. Default to FALSE.
      *
      * @return array an associative array containing the field names (as keys) and field values
      */
-    public function toArray($keyType = TableMap::TYPE_PHPNAME, $includeLazyLoadColumns = true, $alreadyDumpedObjects = array(), $includeForeignObjects = false)
+    public function toArray($keyType = TableMap::TYPE_PHPNAME, $includeLazyLoadColumns = true, $alreadyDumpedObjects = array())
     {
 
         if (isset($alreadyDumpedObjects['Folder'][$this->hashCode()])) {
@@ -831,23 +794,6 @@ abstract class Folder implements ActiveRecordInterface
             $result[$key] = $virtualColumn;
         }
 
-        if ($includeForeignObjects) {
-            if (null !== $this->collFiles) {
-
-                switch ($keyType) {
-                    case TableMap::TYPE_CAMELNAME:
-                        $key = 'files';
-                        break;
-                    case TableMap::TYPE_FIELDNAME:
-                        $key = 'files';
-                        break;
-                    default:
-                        $key = 'Files';
-                }
-
-                $result[$key] = $this->collFiles->toArray(null, false, $keyType, $includeLazyLoadColumns, $alreadyDumpedObjects);
-            }
-        }
 
         return $result;
     }
@@ -1063,20 +1009,6 @@ abstract class Folder implements ActiveRecordInterface
     {
         $copyObj->setParentId($this->getParentId());
         $copyObj->setName($this->getName());
-
-        if ($deepCopy) {
-            // important: temporarily setNew(false) because this affects the behavior of
-            // the getter/setter methods for fkey referrer objects.
-            $copyObj->setNew(false);
-
-            foreach ($this->getFiles() as $relObj) {
-                if ($relObj !== $this) {  // ensure that we don't try to copy a reference to ourselves
-                    $copyObj->addFile($relObj->copy($deepCopy));
-                }
-            }
-
-        } // if ($deepCopy)
-
         if ($makeNew) {
             $copyObj->setNew(true);
             $copyObj->setId(NULL); // this is a auto-increment column, so set to default value
@@ -1103,248 +1035,6 @@ abstract class Folder implements ActiveRecordInterface
         $this->copyInto($copyObj, $deepCopy);
 
         return $copyObj;
-    }
-
-
-    /**
-     * Initializes a collection based on the name of a relation.
-     * Avoids crafting an 'init[$relationName]s' method name
-     * that wouldn't work when StandardEnglishPluralizer is used.
-     *
-     * @param      string $relationName The name of the relation to initialize
-     * @return void
-     */
-    public function initRelation($relationName)
-    {
-        if ('File' == $relationName) {
-            $this->initFiles();
-            return;
-        }
-    }
-
-    /**
-     * Clears out the collFiles collection
-     *
-     * This does not modify the database; however, it will remove any associated objects, causing
-     * them to be refetched by subsequent calls to accessor method.
-     *
-     * @return void
-     * @see        addFiles()
-     */
-    public function clearFiles()
-    {
-        $this->collFiles = null; // important to set this to NULL since that means it is uninitialized
-    }
-
-    /**
-     * Reset is the collFiles collection loaded partially.
-     */
-    public function resetPartialFiles($v = true)
-    {
-        $this->collFilesPartial = $v;
-    }
-
-    /**
-     * Initializes the collFiles collection.
-     *
-     * By default this just sets the collFiles collection to an empty array (like clearcollFiles());
-     * however, you may wish to override this method in your stub class to provide setting appropriate
-     * to your application -- for example, setting the initial array to the values stored in database.
-     *
-     * @param      boolean $overrideExisting If set to true, the method call initializes
-     *                                        the collection even if it is not empty
-     *
-     * @return void
-     */
-    public function initFiles($overrideExisting = true)
-    {
-        if (null !== $this->collFiles && !$overrideExisting) {
-            return;
-        }
-
-        $collectionClassName = FileTableMap::getTableMap()->getCollectionClassName();
-
-        $this->collFiles = new $collectionClassName;
-        $this->collFiles->setModel('\File');
-    }
-
-    /**
-     * Gets an array of ChildFile objects which contain a foreign key that references this object.
-     *
-     * If the $criteria is not null, it is used to always fetch the results from the database.
-     * Otherwise the results are fetched from the database the first time, then cached.
-     * Next time the same method is called without $criteria, the cached collection is returned.
-     * If this ChildFolder is new, it will return
-     * an empty collection or the current collection; the criteria is ignored on a new object.
-     *
-     * @param      Criteria $criteria optional Criteria object to narrow the query
-     * @param      ConnectionInterface $con optional connection object
-     * @return ObjectCollection|ChildFile[] List of ChildFile objects
-     * @throws PropelException
-     */
-    public function getFiles(Criteria $criteria = null, ConnectionInterface $con = null)
-    {
-        $partial = $this->collFilesPartial && !$this->isNew();
-        if (null === $this->collFiles || null !== $criteria  || $partial) {
-            if ($this->isNew() && null === $this->collFiles) {
-                // return empty collection
-                $this->initFiles();
-            } else {
-                $collFiles = ChildFileQuery::create(null, $criteria)
-                    ->filterByFolder($this)
-                    ->find($con);
-
-                if (null !== $criteria) {
-                    if (false !== $this->collFilesPartial && count($collFiles)) {
-                        $this->initFiles(false);
-
-                        foreach ($collFiles as $obj) {
-                            if (false == $this->collFiles->contains($obj)) {
-                                $this->collFiles->append($obj);
-                            }
-                        }
-
-                        $this->collFilesPartial = true;
-                    }
-
-                    return $collFiles;
-                }
-
-                if ($partial && $this->collFiles) {
-                    foreach ($this->collFiles as $obj) {
-                        if ($obj->isNew()) {
-                            $collFiles[] = $obj;
-                        }
-                    }
-                }
-
-                $this->collFiles = $collFiles;
-                $this->collFilesPartial = false;
-            }
-        }
-
-        return $this->collFiles;
-    }
-
-    /**
-     * Sets a collection of ChildFile objects related by a one-to-many relationship
-     * to the current object.
-     * It will also schedule objects for deletion based on a diff between old objects (aka persisted)
-     * and new objects from the given Propel collection.
-     *
-     * @param      Collection $files A Propel collection.
-     * @param      ConnectionInterface $con Optional connection object
-     * @return $this|ChildFolder The current object (for fluent API support)
-     */
-    public function setFiles(Collection $files, ConnectionInterface $con = null)
-    {
-        /** @var ChildFile[] $filesToDelete */
-        $filesToDelete = $this->getFiles(new Criteria(), $con)->diff($files);
-
-
-        $this->filesScheduledForDeletion = $filesToDelete;
-
-        foreach ($filesToDelete as $fileRemoved) {
-            $fileRemoved->setFolder(null);
-        }
-
-        $this->collFiles = null;
-        foreach ($files as $file) {
-            $this->addFile($file);
-        }
-
-        $this->collFiles = $files;
-        $this->collFilesPartial = false;
-
-        return $this;
-    }
-
-    /**
-     * Returns the number of related File objects.
-     *
-     * @param      Criteria $criteria
-     * @param      boolean $distinct
-     * @param      ConnectionInterface $con
-     * @return int             Count of related File objects.
-     * @throws PropelException
-     */
-    public function countFiles(Criteria $criteria = null, $distinct = false, ConnectionInterface $con = null)
-    {
-        $partial = $this->collFilesPartial && !$this->isNew();
-        if (null === $this->collFiles || null !== $criteria || $partial) {
-            if ($this->isNew() && null === $this->collFiles) {
-                return 0;
-            }
-
-            if ($partial && !$criteria) {
-                return count($this->getFiles());
-            }
-
-            $query = ChildFileQuery::create(null, $criteria);
-            if ($distinct) {
-                $query->distinct();
-            }
-
-            return $query
-                ->filterByFolder($this)
-                ->count($con);
-        }
-
-        return count($this->collFiles);
-    }
-
-    /**
-     * Method called to associate a ChildFile object to this object
-     * through the ChildFile foreign key attribute.
-     *
-     * @param  ChildFile $l ChildFile
-     * @return $this|\Folder The current object (for fluent API support)
-     */
-    public function addFile(ChildFile $l)
-    {
-        if ($this->collFiles === null) {
-            $this->initFiles();
-            $this->collFilesPartial = true;
-        }
-
-        if (!$this->collFiles->contains($l)) {
-            $this->doAddFile($l);
-
-            if ($this->filesScheduledForDeletion and $this->filesScheduledForDeletion->contains($l)) {
-                $this->filesScheduledForDeletion->remove($this->filesScheduledForDeletion->search($l));
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param ChildFile $file The ChildFile object to add.
-     */
-    protected function doAddFile(ChildFile $file)
-    {
-        $this->collFiles[]= $file;
-        $file->setFolder($this);
-    }
-
-    /**
-     * @param  ChildFile $file The ChildFile object to remove.
-     * @return $this|ChildFolder The current object (for fluent API support)
-     */
-    public function removeFile(ChildFile $file)
-    {
-        if ($this->getFiles()->contains($file)) {
-            $pos = $this->collFiles->search($file);
-            $this->collFiles->remove($pos);
-            if (null === $this->filesScheduledForDeletion) {
-                $this->filesScheduledForDeletion = clone $this->collFiles;
-                $this->filesScheduledForDeletion->clear();
-            }
-            $this->filesScheduledForDeletion[]= clone $file;
-            $file->setFolder(null);
-        }
-
-        return $this;
     }
 
     /**
@@ -1375,14 +1065,8 @@ abstract class Folder implements ActiveRecordInterface
     public function clearAllReferences($deep = false)
     {
         if ($deep) {
-            if ($this->collFiles) {
-                foreach ($this->collFiles as $o) {
-                    $o->clearAllReferences($deep);
-                }
-            }
         } // if ($deep)
 
-        $this->collFiles = null;
     }
 
     /**

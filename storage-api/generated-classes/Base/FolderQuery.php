@@ -10,7 +10,6 @@ use Map\FolderTableMap;
 use Propel\Runtime\Propel;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\ModelCriteria;
-use Propel\Runtime\ActiveQuery\ModelJoin;
 use Propel\Runtime\Collection\ObjectCollection;
 use Propel\Runtime\Connection\ConnectionInterface;
 use Propel\Runtime\Exception\PropelException;
@@ -35,18 +34,6 @@ use Propel\Runtime\Exception\PropelException;
  * @method     ChildFolderQuery leftJoinWith($relation) Adds a LEFT JOIN clause and with to the query
  * @method     ChildFolderQuery rightJoinWith($relation) Adds a RIGHT JOIN clause and with to the query
  * @method     ChildFolderQuery innerJoinWith($relation) Adds a INNER JOIN clause and with to the query
- *
- * @method     ChildFolderQuery leftJoinFile($relationAlias = null) Adds a LEFT JOIN clause to the query using the File relation
- * @method     ChildFolderQuery rightJoinFile($relationAlias = null) Adds a RIGHT JOIN clause to the query using the File relation
- * @method     ChildFolderQuery innerJoinFile($relationAlias = null) Adds a INNER JOIN clause to the query using the File relation
- *
- * @method     ChildFolderQuery joinWithFile($joinType = Criteria::INNER_JOIN) Adds a join clause and with to the query using the File relation
- *
- * @method     ChildFolderQuery leftJoinWithFile() Adds a LEFT JOIN clause and with to the query using the File relation
- * @method     ChildFolderQuery rightJoinWithFile() Adds a RIGHT JOIN clause and with to the query using the File relation
- * @method     ChildFolderQuery innerJoinWithFile() Adds a INNER JOIN clause and with to the query using the File relation
- *
- * @method     \FileQuery endUse() Finalizes a secondary criteria and merges it with its primary Criteria
  *
  * @method     ChildFolder findOne(ConnectionInterface $con = null) Return the first ChildFolder matching the query
  * @method     ChildFolder findOneOrCreate(ConnectionInterface $con = null) Return the first ChildFolder matching the query, or a new ChildFolder object populated from the query conditions when no match is found
@@ -359,79 +346,6 @@ abstract class FolderQuery extends ModelCriteria
         }
 
         return $this->addUsingAlias(FolderTableMap::COL_NAME, $name, $comparison);
-    }
-
-    /**
-     * Filter the query by a related \File object
-     *
-     * @param \File|ObjectCollection $file the related object to use as filter
-     * @param string $comparison Operator to use for the column comparison, defaults to Criteria::EQUAL
-     *
-     * @return ChildFolderQuery The current query, for fluid interface
-     */
-    public function filterByFile($file, $comparison = null)
-    {
-        if ($file instanceof \File) {
-            return $this
-                ->addUsingAlias(FolderTableMap::COL_ID, $file->getFolderId(), $comparison);
-        } elseif ($file instanceof ObjectCollection) {
-            return $this
-                ->useFileQuery()
-                ->filterByPrimaryKeys($file->getPrimaryKeys())
-                ->endUse();
-        } else {
-            throw new PropelException('filterByFile() only accepts arguments of type \File or Collection');
-        }
-    }
-
-    /**
-     * Adds a JOIN clause to the query using the File relation
-     *
-     * @param     string $relationAlias optional alias for the relation
-     * @param     string $joinType Accepted values are null, 'left join', 'right join', 'inner join'
-     *
-     * @return $this|ChildFolderQuery The current query, for fluid interface
-     */
-    public function joinFile($relationAlias = null, $joinType = Criteria::INNER_JOIN)
-    {
-        $tableMap = $this->getTableMap();
-        $relationMap = $tableMap->getRelation('File');
-
-        // create a ModelJoin object for this join
-        $join = new ModelJoin();
-        $join->setJoinType($joinType);
-        $join->setRelationMap($relationMap, $this->useAliasInSQL ? $this->getModelAlias() : null, $relationAlias);
-        if ($previousJoin = $this->getPreviousJoin()) {
-            $join->setPreviousJoin($previousJoin);
-        }
-
-        // add the ModelJoin to the current object
-        if ($relationAlias) {
-            $this->addAlias($relationAlias, $relationMap->getRightTable()->getName());
-            $this->addJoinObject($join, $relationAlias);
-        } else {
-            $this->addJoinObject($join, 'File');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Use the File relation File object
-     *
-     * @see useQuery()
-     *
-     * @param     string $relationAlias optional alias for the relation,
-     *                                   to be used as main alias in the secondary query
-     * @param     string $joinType Accepted values are null, 'left join', 'right join', 'inner join'
-     *
-     * @return \FileQuery A secondary query class using the current class as primary query
-     */
-    public function useFileQuery($relationAlias = null, $joinType = Criteria::INNER_JOIN)
-    {
-        return $this
-            ->joinFile($relationAlias, $joinType)
-            ->useQuery($relationAlias ? $relationAlias : 'File', '\FileQuery');
     }
 
     /**

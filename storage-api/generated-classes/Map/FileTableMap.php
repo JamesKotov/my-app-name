@@ -137,7 +137,7 @@ class FileTableMap extends TableMap
         $this->setUseIdGenerator(true);
         // columns
         $this->addPrimaryKey('id', 'Id', 'INTEGER', true, null, null);
-        $this->addForeignKey('folder_id', 'FolderId', 'INTEGER', 'folder', 'id', true, null, null);
+        $this->addColumn('folder_id', 'FolderId', 'INTEGER', true, null, null);
         $this->addColumn('name', 'Name', 'VARCHAR', true, 255, null);
     } // initialize()
 
@@ -146,13 +146,6 @@ class FileTableMap extends TableMap
      */
     public function buildRelations()
     {
-        $this->addRelation('Folder', '\\Folder', RelationMap::MANY_TO_ONE, array (
-  0 =>
-  array (
-    0 => ':folder_id',
-    1 => ':id',
-  ),
-), 'CASCADE', null, null, false);
     } // buildRelations()
 
     /**

@@ -19,9 +19,5 @@
         <column name="id" type="integer" required="true" primaryKey="true" autoIncrement="true"/>
         <column name="folder_id" type="integer" required="true" />
         <column name="name" type="varchar" size="255" required="true" />
-
-        <foreign-key foreignTable="folder" phpName="Folder" refPhpName="File" onDelete="cascade">
-            <reference local="folder_id" foreign="id"/>
-        </foreign-key>
     </table>
 </database>
