@@ -26,8 +26,8 @@ abstract class StorageApi {
 			foreach ($aPath as $index => $sPathItem)
 			{
 				$this->oFolder = FolderQuery::create()
-					->filterByName($sPathItem)
 					->filterByParentId($iParentId)
+					->filterByName($sPathItem)
 					->findOne();
 
 				// Found
@@ -53,8 +53,8 @@ abstract class StorageApi {
 			{
 				// try to find a file
 				$this->oFile = FileQuery::create()
-					->filterByName($aPath[0])
 					->filterByFolderId($this->oFolder->getId())
+					->filterByName($aPath[0])
 					->findOne();
 
 				if (is_null($this->oFile))
