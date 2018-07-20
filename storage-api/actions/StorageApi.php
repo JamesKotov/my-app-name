@@ -1,6 +1,6 @@
 <?php
 
-abstract class StorageApi
+class StorageApi
 {
 
 	protected $container;
@@ -148,7 +148,8 @@ abstract class StorageApi
 	public function sendFile($oFile)
 	{
 		$filePath = $this->filesDir . DIRECTORY_SEPARATOR . $oFile->getId();
-		if (file_exists($filePath)) {
+		if (file_exists($filePath))
+		{
 			header('Content-Description: File Transfer');
 			header('Content-Type: application/octet-stream');
 			header('Content-Disposition: attachment; filename="' . $oFile->getName() . '"');
@@ -160,6 +161,33 @@ abstract class StorageApi
 			exit;
 		}
 		return false;
+	}
+
+	public function deleteFile($oFile)
+	{
+		$filePath = $this->filesDir . DIRECTORY_SEPARATOR . $oFile->getId();
+		$oFile->delete();
+		unlink($filePath);
+	}
+
+	public function deleteFolder($oFolder)
+	{
+		$aSubfoldersCollection = FolderQuery::create()->findByParentId($oFolder->getId());
+		foreach ($aSubfoldersCollection as $oSubfolder)
+		{
+			$this->deleteFolder($oSubfolder);
+		}
+
+		$aFilesCollection = FileQuery::create()->findByFolderId($oFolder->getId());
+		foreach ($aFilesCollection as $oFile)
+		{
+			$this->deleteFile($oFile);
+		}
+
+		if ($oFolder->getParentId() >= 0)
+		{
+			$oFolder->delete();
+		}
 	}
 
 	public function __invoke($request, $response, $args)
