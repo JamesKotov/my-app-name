@@ -1,4 +1,4 @@
-# A candidate test for Paxum
+# A candidate test
 
 ## Task description
 
