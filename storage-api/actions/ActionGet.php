@@ -1,36 +1,29 @@
 <?php
 
-class ActionGet extends StorageApi {
+class ActionGet extends StorageApi
+{
 
-	public function __invoke($request, $response, $args) {
-
+	public function __invoke($request, $response, $args)
+	{
 		parent::__invoke($request, $response, $args);
 
-		if ($this->isError) {
-			$data = array('status' => 'error');
+		if ($this->isError)
+		{
+			$data = array('status' => 'error', 'code' => 'path not found');
 			return $response->withJson($data, 404);
 		}
 
-		$data = array('status' => 'ok', 'folder' => $this->oFolder->getName(), 'subfolders' => [], 'files' => []);
-
 		if (!is_null($this->oFile))
 		{
-			$data['file'] = $this->oFile->getName();
-
+			if (!$this->sendFile($this->oFile))
+			{
+				$data = array('status' => 'error', 'code' => 'can\'t send file');
+				return $response->withJson($data, 500);
+			}
 		} else
 		{
-			$aSubfoldersCollection = FolderQuery::create()->findByParentId($this->oFolder->getId());
-			foreach ($aSubfoldersCollection as $oSubfolder) {
-				$data['subfolders'][] = $oSubfolder->getName();
-			}
-
-			$aFilesCollection = FileQuery::create()->findByFolderId($this->oFolder->getId());
-			foreach ($aFilesCollection as $oFile) {
-				$data['files'][] = $oFile->getName();
-			}
+			$data = $this->getFolderContent($this->oFolder);
+			return $response->withJson($data);
 		}
-
-		return $response->withJson($data);
-
 	}
 }
