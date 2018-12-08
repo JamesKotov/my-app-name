@@ -1,4 +1,6 @@
-# A candidate test
+# Cloud storage example
+
+Test work for %companyname%, written in July 2018.
 
 ## Task description
 
